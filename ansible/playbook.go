@@ -21,7 +21,6 @@ type PlaybookConfig struct {
 	Tags []string
 	SkipTags []string
 	Limit            string
-	Phase            string
 	CleanupOnSuccess bool
 }
 
@@ -31,12 +30,12 @@ type Playbook struct {
 	PlaybookConfig
 }
 
-func NewPlaybook(output io.Writer, config PlaybookConfig) (p *Playbook, err error) {
+func NewPlaybook(wd string, output io.Writer, config PlaybookConfig) (p *Playbook) {
 	p = &Playbook{
+		WD: wd,
 		Output:         output,
 		PlaybookConfig: config,
 	}
-	p.WD, err = os.Getwd()
 	return
 }
 

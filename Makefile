@@ -31,7 +31,7 @@ install: $(INSTALL_DIR)/$(BIN)
 install-debug: $(INSTALL_DIR)/$(BIN)-debug
 
 $(INSTALL_DIR)/$(BIN): $(SRC) $(SRC_VENDOR)
-	GOPATH=$(VENDOR):$(GOPATH) CGO_ENABLED=0 go build $(GOOPTS) -o $@ $(REPO)/command/$(BIN)
+	CGO_ENABLED=0 go build $(GOOPTS) -o $@ $(REPO)/command/$(BIN)
 
 $(INSTALL_DIR)/$(BIN)-debug: $(SRC) $(SRC_VENDOR)
 	GOPATH=$(VENDOR):$(GOPATH) CGO_ENABLED=0 go build $(GOOPTS) -tags debug -o $@ $(REPO)/command/$(BIN)

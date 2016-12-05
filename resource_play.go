@@ -2,12 +2,10 @@ package terraform_ansible2
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	"log"
-	"fmt"
 	"github.com/akaspin/terraform-ansible2/ansible"
-	"io"
 	"github.com/hashicorp/terraform/helper/logging"
-	"hash/crc32"
+	"io"
+	"log"
 )
 
 // resourcePlay  
@@ -15,30 +13,27 @@ func resourcePlay() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"playbook": {
-				Description: "Playbook contents",
+				Description: "Playbook path",
 				Type: schema.TypeString,
 				Required: true,
-			},
-			"directory": {
-				Description: "Playbook directory",
-				Type: schema.TypeString,
-				Optional: true,
 			},
 			"inventory": {
 				Description: "Inventory contents",
 				Type: schema.TypeString,
 				Required: true,
+				StateFunc: hashId,
 			},
 			"config": {
 				Description: "Config contents",
 				Type: schema.TypeString,
 				Optional: true,
+				StateFunc: hashId,
 			},
 			"extra_json": {
-				Description: "Extra variables",
+				Description: "Extra variables JSON",
 				Type: schema.TypeString,
 				Optional: true,
-				Default: "'{}'",
+				StateFunc: hashId,
 			},
 			"limit": {
 				Description: "Limit play",
@@ -46,16 +41,81 @@ func resourcePlay() *schema.Resource {
 				Optional: true,
 				Default: "all",
 			},
-			"on_destroy": {
-				Description: "Run on destroy",
-				Type: schema.TypeBool,
+			"tags": {
+				Description: "Tags",
+				Type: schema.TypeList,
 				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
+			"skip_tags": {
+				Description: "Skip tags",
+				Type: schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			//"phase": {
+			//	Description: "Phase control",
+			//	Type: schema.TypeList,
+			//	Optional: true,
+			//	//Computed: true,
+			//	Elem: &schema.Resource{
+			//		Schema: map[string]*schema.Schema{
+			//			"create": {
+			//				Description: "Run on create",
+			//				Type:     schema.TypeBool,
+			//				Optional: true,
+			//				Default:  true,
+			//			},
+			//			"modify": {
+			//				Description: "Run on modify",
+			//				Type:     schema.TypeBool,
+			//				Optional: true,
+			//				Default:  true,
+			//			},
+			//			"destroy": {
+			//				Description: "Run on destroy",
+			//				Type:     schema.TypeBool,
+			//				Optional: true,
+			//				Default:  false,
+			//			},
+			//			
+			//			"tag": {
+			//				Description: "Add create/modify/destroy tag",
+			//				Type: schema.TypeBool,
+			//				Optional: true,
+			//				Default: true,
+			//			},
+			//			"strict_tag": {
+			//				Description: "Do not add untagged to tags if phase tag is on",
+			//				Type: schema.TypeBool,
+			//				Optional: true,
+			//				Default: false,
+			//			},
+			//		},
+			//	},
+			//	MaxItems: 1,
+			//},
 			"cleanup": {
 				Description: "Remove ansible files after successful run",
 				Type: schema.TypeBool,
 				Optional: true,
-				Default: false,
+				//Default: false,
+			},
+			"test": {
+				Description: "Remove ansible files after successful run",
+				Type: schema.TypeInt,
+				Optional: true,
+				//Default: false,
+			},
+			"test_string": {
+				Description: "Remove ansible files after successful run",
+				Type: schema.TypeString,
+				Optional: true,
+				//Default: false,
 			},
 		},
 		Create: resourcePlayCreate,
@@ -66,83 +126,76 @@ func resourcePlay() *schema.Resource {
 }
 
 func resourcePlayCreate(d *schema.ResourceData, meta interface{}) (err error) {
-	if err = resourcePlayRead(d, meta); err != nil {
-		d.SetId("")
-		return 
-	}
-	
+	resourcePlayRead(d, meta)
+	d.SetId(id())
 	runner, err := resourcePlayGetRunner(d, meta, "create")
 	if err != nil {
+		d.SetId("")
 		return 
 	}
 	
 	if err = runner.Run(); err != nil {
-		d.SetId("")
+		//d.SetId("")
 		return 
 	}
 	return 
 }
 
 func resourcePlayUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-	// cleanup
-	output, err := getOutput()
+	resourcePlayRead(d, meta)
+	d.Partial(true)
+	
+	runner, err := resourcePlayGetRunner(d, meta, "update")
 	if err != nil {
-		return 
-	}
-	prev_directory, _ := d.GetChange("directory")
-	runner, err := ansible.NewPlaybook(output, ansible.PlaybookConfig{
-		Id: d.Id(),
-		PlayDir: prev_directory.(string),
-	})
-	if err != nil {
-		return 
+		return
 	}
 	runner.Cleanup()
-	
-	if err = resourcePlayRead(d, meta); err != nil {
-		return 
-	}
+
+	d.SetId(id())
 	runner, err = resourcePlayGetRunner(d, meta, "update")
 	if err != nil {
 		return
 	}
-
-	if err = runner.Run(); err != nil {
-		d.SetId("")
-		return 
-	}
+	err = runner.Run()
 	return 
 }
 
 func resourcePlayRead(d *schema.ResourceData, meta interface{}) (err error) {
-	resourcePlaySetId(d)
+	log.Printf(">>> read %#v", d.Get("phase"))
+	//if _, ok := d.GetOk("phase"); !ok {
+	//	if err := d.Set("phase", []interface{}{}); err != nil {
+	//		return err
+	//	}
+	//}
+	
+	
 	return 
 }
 
 func resourcePlayDelete(d *schema.ResourceData, meta interface{}) (err error) {
+	resourcePlayRead(d, meta)
 	runner, err := resourcePlayGetRunner(d, meta, "destroy")
 	if err != nil {
 		return 
 	}
-	if d.Get("on_destroy").(bool) {
-		if err = runner.Run(); err != nil {
-			d.SetId("")
-			return 
-		}
-	}
+	//if err = runner.Run(); err != nil {
+	//	return 
+	//}
 	runner.Cleanup()
 	d.SetId("")
 	return 
 }
 
 func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase string) (r *ansible.Playbook, err error) {
+	log.Print("create runner")
+	
+	
 	config := ansible.PlaybookConfig{
 		Id: d.Id(),
 		Config: d.Get("config").(string),
-		Extra: d.Get("extra_json").(string),
+		ExtraJson: d.Get("extra_json").(string),
 		Inventory: d.Get("inventory").(string),
-		Playbook: d.Get("playbook").(string),
-		PlayDir: d.Get("directory").(string),
+		PlaybookPath: d.Get("playbook").(string),
 		Limit: d.Get("limit").(string),
 		Phase: phase,
 		CleanupOnSuccess: d.Get("cleanup").(bool),
@@ -152,36 +205,10 @@ func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase strin
 		return 
 	}
 	r, err = ansible.NewPlaybook(output, config)
-	return 
-}
-
-func resourcePlaySetId(d *schema.ResourceData) (err error) {
-	sha := crc32.NewIEEE()
-	sha.Write([]byte(d.Get("playbook").(string)))
-	sha.Write([]byte(d.Get("directory").(string)))
-	sha.Write([]byte(d.Get("inventory").(string)))
-	sha.Write([]byte(d.Get("config").(string)))
-	sha.Write([]byte(d.Get("extra_json").(string)))
-	sha.Write([]byte(d.Get("limit").(string)))
-	sha.Write([]byte(fmt.Sprintf("%t", d.Get("on_destroy").(bool))))
-	d.SetId(fmt.Sprintf("%x", sha.Sum(nil)))
-	return 
-}
-
-func dump(what string, d *schema.ResourceData) {
-	msg := fmt.Sprintf("%s[%t] %s", what, d.IsNewResource(), d.Id())
-	for _, k := range []string{
-		"playbook",
-		"inventory",
-		"config",
-		"extra_json",
-		"limit",
-		"root",
-	} {
-		msg += fmt.Sprintf(" %s(%t)", k, d.HasChange(k))
+	if err == nil {
+		log.Print("runner created")
 	}
-	log.Printf("%s", msg)
-	log.Printf(">>> %s", d.Get("root"))
+	return 
 }
 
 func getOutput() (io.Writer, error) {

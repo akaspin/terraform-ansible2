@@ -2,6 +2,35 @@
 - hosts: all
   gather_facts: no
   tasks:
-  - debug: var=inventory_hostname
+  - debug: msg='no'
+
+- hosts: all
+  gather_facts: no
+  tasks:
+  - debug: msg='create only'
+  tags:
+  - create
+
+- hosts: all
+  gather_facts: no
+  tasks:
+  - debug: msg='create,modify'
+  tags:
+  - create
+  - modify
+
+- hosts: all
+  gather_facts: no
+  tasks:
+  - debug: msg='modify'
+  tags:
+  - modify
+
+- hosts: all
+  gather_facts: no
+  tasks:
+  - debug: msg='destroy'
+  tags:
+  - destroy
 
 

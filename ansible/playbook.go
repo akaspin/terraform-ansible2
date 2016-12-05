@@ -1,82 +1,100 @@
 package ansible
 
 import (
-	"os"
-	"path/filepath"
-	"fmt"
-	"io/ioutil"
 	"encoding/json"
+	"fmt"
 	"io"
-	"os/exec"
+	"io/ioutil"
 	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 type PlaybookConfig struct {
-	Id        string
-	Inventory string
-	Playbook  string
-	PlayDir   string
-	Config    string
-	Extra     string
-	Limit     string
-	Phase     string
-	CleanupOnSuccess   bool
-} 
+	Id               string
+	PlaybookPath     string
+	Inventory        string
+	Config           string
+	ExtraJson        string
+	Tags []string
+	SkipTags []string
+	Limit            string
+	Phase            string
+	CleanupOnSuccess bool
+}
 
 type Playbook struct {
-	WD string
+	WD     string
 	Output io.Writer
-	PlaybookConfig	
+	PlaybookConfig
 }
 
 func NewPlaybook(output io.Writer, config PlaybookConfig) (p *Playbook, err error) {
 	p = &Playbook{
-		Output: output,
+		Output:         output,
 		PlaybookConfig: config,
 	}
 	p.WD, err = os.Getwd()
-	return 
+	return
 }
 
 func (p *Playbook) Run() (err error) {
 	var extra string
 	if extra, err = p.extra(); err != nil {
-		return 
+		return
 	}
 	if err = p.prepare(); err != nil {
-		return 
+		return
 	}
-	
+
 	params := []string{
 		"-l", p.Limit,
 		"-i", p.assetPath("inventory"),
-		"-e", fmt.Sprintf("'%s'", extra),
-		p.playbookPath(),
 	}
-	
-	cmd := exec.Command("ansible-playbook", params...)
-	cmd.Env = append(os.Environ(), 
+	if extra != "" {
+		params = append(params, []string{"-e", fmt.Sprintf("'%s'", extra)}...)
+	}
+	if len(p.Tags) > 0 {
+		params = append(params, []string{
+			"--tags", 
+			fmt.Sprintf(`"%s"`, strings.Join(p.Tags, ",")),
+		}...)
+	}
+	if len(p.SkipTags) > 0 {
+		params = append(params, []string{
+			"--skip-tags", 
+			fmt.Sprintf(`"%s"`, strings.Join(p.SkipTags, ",")),
+		}...)
+	}
+
+	cmd := exec.Command("ansible-playbook", append(params, p.PlaybookPath)...)
+	cmd.Env = append(os.Environ(),
 		[]string{
-			fmt.Sprintf("ANSIBLE_CONFIG=%s", p.assetPath("cfg")),
 			fmt.Sprintf("ANSIBLE_LOG_PATH=%s", p.assetPath("log")),
 			"ANSIBLE_RETRY_FILES_ENABLED=no",
 		}...)
+	if p.Config != "" {
+		cmd.Env = append(cmd.Env,
+			fmt.Sprintf("ANSIBLE_CONFIG=%s", p.assetPath("cfg")))
+	}
+
 	log.Printf("running ansible-playbook %s %s", params, cmd.Env)
 	cmd.Stdout = p.Output
 	cmd.Stderr = p.Output
 	if err = cmd.Run(); err != nil {
 		err = fmt.Errorf("%v : see log %s", err, p.assetPath("log"))
-		return 
+		return
 	}
 	if p.CleanupOnSuccess {
 		p.Cleanup()
 	}
-	return 
+	return
 }
 
 // Silently cleanup all files
 func (p *Playbook) Cleanup() {
-	os.Remove(p.playbookPath())
 	os.Remove(p.assetPath("cfg"))
 	os.Remove(p.assetPath("inventory"))
 	os.Remove(p.assetPath("log"))
@@ -84,42 +102,35 @@ func (p *Playbook) Cleanup() {
 
 func (p *Playbook) prepare() (err error) {
 	p.Cleanup()
-	if err = ioutil.WriteFile(p.playbookPath(), []byte(p.Playbook), 0755); err != nil {
-		return 
-	}
-	if err = ioutil.WriteFile(p.assetPath("cfg"), []byte(p.Config), 0755); err != nil {
-		return 
-	}
 	if err = ioutil.WriteFile(p.assetPath("inventory"), []byte(p.Inventory), 0755); err != nil {
-		return 
+		return
 	}
-	if err = ioutil.WriteFile(p.assetPath("log"), []byte(p.Inventory), 0755); err != nil {
-		return 
+	if p.Config != "" {
+		if err = ioutil.WriteFile(p.assetPath("cfg"), []byte(p.Config), 0755); err != nil {
+			return
+		}
 	}
-	return 
+	return
 }
 
 func (p *Playbook) extra() (r string, err error) {
-	mid := map[string]interface{}{}
-	if err = json.Unmarshal([]byte(p.Extra), &mid); err != nil {
+	if p.ExtraJson == "" {
 		return 
 	}
-	mid["phase"] = p.Phase
-	
+	mid := map[string]interface{}{}
+	if err = json.Unmarshal([]byte(p.ExtraJson), &mid); err != nil {
+		return
+	}
+
 	data, err := json.Marshal(&mid)
 	if err != nil {
-		return 
+		return
 	}
 	r = string(data)
-	return 
+	return
 }
 
 func (p *Playbook) assetPath(kind string) (r string) {
-	r = filepath.Join(p.WD, fmt.Sprintf(".tf-%s.%s", p.Id, kind))
-	return 
-}
-
-func (p *Playbook) playbookPath() (r string) {
-	r = filepath.Join(p.PlayDir, fmt.Sprintf(".tf-%s.yaml", p.Id))
-	return 
+	r = filepath.Join(p.WD, fmt.Sprintf(".ansible-%s.%s", p.Id, kind))
+	return
 }

@@ -9,7 +9,7 @@ data "ansible2_inventory" "test" {
     names = ["second-0", "second-1"]
 
     var {
-      key = "ansible_user"
+      key = "ansible_user1"
       value = "centos"
     }
   }
@@ -24,25 +24,29 @@ data "ansible2_inventory" "test" {
   }
 }
 
-data "ansible2_playbook" "test_1" {
-  contents = "${file("${path.root}/ansible/playbook-1.yaml")}"
-  path = "ansible"
-}
-
 data "ansible2_config" "test_1" {
   roles_path = "./roles"
   task_includes_static = true
 }
 
 resource "ansible2_play" "test" {
+  count = 2
+  
   inventory = "${data.ansible2_inventory.test.rendered}"
-  playbook = "${data.ansible2_playbook.test_1.rendered}"
-  directory = "${data.ansible2_playbook.test_1.directory}"
+  playbook = "${path.root}/ansible/playbook-1.yaml"
   config = "${data.ansible2_config.test_1.rendered}"
   extra_json = <<EOF
   {
     "environment": "aws"
   }
   EOF
+//  cleanup = true
+//  cleanup = 1
+//  test = 1
+  test_string = "aaaa"
+  
+//  phase {
+//    modify = false
+//  }
 }
 

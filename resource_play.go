@@ -1,20 +1,29 @@
-package terraform_ansible2
+package terraform_provider_ansible
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/akaspin/terraform-ansible2/ansible"
 	"github.com/hashicorp/terraform/helper/logging"
 	"os"
+	"io/ioutil"
+	"path/filepath"
+	"fmt"
+	"strings"
 )
 
-// resourcePlay  
 func resourcePlay() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"playbook": {
+				Description: "Prepared playbook",
+				Type: schema.TypeString,
+				Optional: true,
+				ConflictsWith: []string{"playbook_path"},
+			},
+			"playbook_path": {
 				Description: "Playbook path",
 				Type: schema.TypeString,
-				Required: true,
+				Optional: true,
+				ConflictsWith: []string{"playbook"},
 			},
 			"inventory": {
 				Description: "Inventory contents",
@@ -108,7 +117,6 @@ func resourcePlay() *schema.Resource {
 }
 
 func resourcePlayCreate(d *schema.ResourceData, meta interface{}) (err error) {
-	resourcePlayRead(d, meta)
 	d.SetId(id())
 	if runner, ok := resourcePlayGetRunner(d, meta, "create"); ok {
 		err = runner.Run()
@@ -117,9 +125,6 @@ func resourcePlayCreate(d *schema.ResourceData, meta interface{}) (err error) {
 }
 
 func resourcePlayUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-	resourcePlayRead(d, meta)
-	//d.Partial(true)
-	
 	if runner, ok := resourcePlayGetRunner(d, meta, "update"); ok {
 		err = runner.Run()
 	} 
@@ -131,7 +136,6 @@ func resourcePlayRead(d *schema.ResourceData, meta interface{}) (err error) {
 }
 
 func resourcePlayDelete(d *schema.ResourceData, meta interface{}) (err error) {
-	resourcePlayRead(d, meta)
 	runner, ok := resourcePlayGetRunner(d, meta, "destroy")
 	if ok {
 		if err = runner.Run(); err != nil {
@@ -143,7 +147,7 @@ func resourcePlayDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	return 
 }
 
-func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase string) (r *ansible.Playbook, ok bool) {
+func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase string) (r *Play, ok bool) {
 	output, err := logging.LogOutput()
 	if err != nil {
 		panic(err)
@@ -152,7 +156,51 @@ func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase strin
 	if err != nil {
 		panic(err)
 	}
-	phaseOpts := resourcePlayPhase(d)
+	
+	// prepare playbook
+	var playbookContents, playbookDir string
+	
+	if rawPath, rawExists := d.GetOk("playbook_path"); rawExists {
+		var data []byte
+		if data, err = ioutil.ReadFile(rawPath.(string)); err != nil {
+			return 
+		}
+		playbookContents = string(data)
+		playbookDir = filepath.Dir(rawPath.(string))
+	} else if rawContents, rawExists1 := d.GetOk("playbook"); rawExists1 {
+		playbookContents = rawContents.(string)
+		for _, line := range strings.Split(playbookContents, "\n") {
+			if strings.HasPrefix(line, "# DIR ") {
+				playbookDir = strings.TrimPrefix(line, "# DIR ")
+				break
+			}
+		}
+		if playbookDir == "" {
+			err = fmt.Errorf(
+				`No directory in prepared playbook. Use "ansible_playbook" datasource.`)
+		}
+		
+	} else {
+		err = fmt.Errorf("One of playbook or playbook_path is required")
+		return 
+	}
+	
+	
+	phaseOpts := map[string]bool{}
+	if raw, exists := d.GetOk("phase"); exists {
+		for k, v := range raw.([]interface{})[0].(map[string]interface{}) {
+			phaseOpts[k] = v.(bool)
+		}
+	} else {
+		phaseOpts = map[string]bool{
+			"create": true,
+			"update": true,
+			"destroy": false,
+			"tag": true,
+			"untagged": true,
+		}
+		
+	}
 	
 	tags := extractStringSlice(d, "tags")
 	if phaseOpts["tag"] {
@@ -162,36 +210,19 @@ func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase strin
 		tags = append(tags, "untagged")
 	}
 	
-	config := ansible.PlaybookConfig{
+	config := PlaybookConfig{
 		Id: d.Id(),
 		Config: d.Get("config").(string),
 		ExtraJson: d.Get("extra_json").(string),
 		Inventory: d.Get("inventory").(string),
-		PlaybookPath: d.Get("playbook").(string),
+		Playbook: playbookContents,
+		PlayDir: playbookDir,
 		Tags: tags,
 		SkipTags: extractStringSlice(d, "skip_tags"),
 		Limit: d.Get("limit").(string),
 		CleanupOnSuccess: d.Get("cleanup").(bool),
 	}
-	r = ansible.NewPlaybook(wd, output, config)
+	r = NewPlay1(wd, output, config)
 	ok = phaseOpts[phase]
-	return 
-}
-
-func resourcePlayPhase(d *schema.ResourceData) (r map[string]bool) {
-	r = map[string]bool{}
-	if raw, ok := d.GetOk("phase"); ok {
-		for k, v := range raw.([]interface{})[0].(map[string]interface{}) {
-			r[k] = v.(bool)
-		}
-		return 
-	}
-	r = map[string]bool{
-		"create": true,
-		"update": true,
-		"destroy": false,
-		"tag": true,
-		"untagged": true,
-	}
 	return 
 }

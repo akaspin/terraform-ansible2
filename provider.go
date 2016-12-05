@@ -1,4 +1,4 @@
-package terraform_ansible2
+package terraform_provider_ansible
 
 import (
 	"github.com/hashicorp/terraform/terraform"
@@ -12,9 +12,10 @@ func Provider() (p terraform.ResourceProvider) {
 		DataSourcesMap: map[string]*schema.Resource{
 			"ansible_inventory": dataInventory(),
 			"ansible_config": dataConfig(),
+			"ansible_playbook": dataPlaybook(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"ansible": resourcePlay(),
+			"ansible_playbook": resourcePlay(),
 		},
 	}
 	return 

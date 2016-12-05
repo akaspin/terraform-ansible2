@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/akaspin/terraform-ansible2"
+	"github.com/akaspin/terraform-provider-ansible"
 	"github.com/hashicorp/terraform/plugin"
 	"github.com/hashicorp/terraform/terraform"
 	"log"
@@ -16,7 +16,7 @@ func main() {
 	
 	plugin.Serve(&plugin.ServeOpts{
 		ProviderFunc: func() terraform.ResourceProvider {
-			return terraform_ansible2.Provider()
+			return terraform_provider_ansible.Provider()
 		},
 	})
 }

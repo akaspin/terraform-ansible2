@@ -1,4 +1,4 @@
-package ansible
+package terraform_provider_ansible
 
 import (
 	"encoding/json"
@@ -14,24 +14,27 @@ import (
 
 type PlaybookConfig struct {
 	Id               string
-	PlaybookPath     string
+
+	Playbook         string
+	PlayDir          string
+
 	Inventory        string
 	Config           string
 	ExtraJson        string
-	Tags []string
-	SkipTags []string
+	Tags             []string
+	SkipTags         []string
 	Limit            string
 	CleanupOnSuccess bool
 }
 
-type Playbook struct {
+type Play struct {
 	WD     string
 	Output io.Writer
 	PlaybookConfig
 }
 
-func NewPlaybook(wd string, output io.Writer, config PlaybookConfig) (p *Playbook) {
-	p = &Playbook{
+func NewPlay1(wd string, output io.Writer, config PlaybookConfig) (p *Play) {
+	p = &Play{
 		WD: wd,
 		Output:         output,
 		PlaybookConfig: config,
@@ -39,13 +42,22 @@ func NewPlaybook(wd string, output io.Writer, config PlaybookConfig) (p *Playboo
 	return
 }
 
-func (p *Playbook) Run() (err error) {
+func (p *Play) Run() (err error) {
 	var extra string
 	if extra, err = p.extra(); err != nil {
 		return
 	}
-	if err = p.prepare(); err != nil {
+	p.Cleanup()
+	if err = ioutil.WriteFile(p.assetPath("inventory"), []byte(p.Inventory), 0755); err != nil {
 		return
+	}
+	if err = ioutil.WriteFile(p.playbookPath(), []byte(p.Playbook), 0755); err != nil {
+		return
+	}
+	if p.Config != "" {
+		if err = ioutil.WriteFile(p.assetPath("cfg"), []byte(p.Config), 0755); err != nil {
+			return
+		}
 	}
 
 	params := []string{
@@ -67,8 +79,8 @@ func (p *Playbook) Run() (err error) {
 			fmt.Sprintf(`"%s"`, strings.Join(p.SkipTags, ",")),
 		}...)
 	}
-
-	cmd := exec.Command("ansible-playbook", append(params, p.PlaybookPath)...)
+	
+	cmd := exec.Command("ansible-playbook", append(params, p.playbookPath())...)
 	cmd.Env = append(os.Environ(),
 		[]string{
 			fmt.Sprintf("ANSIBLE_LOG_PATH=%s", p.assetPath("log")),
@@ -93,26 +105,14 @@ func (p *Playbook) Run() (err error) {
 }
 
 // Silently cleanup all files
-func (p *Playbook) Cleanup() {
+func (p *Play) Cleanup() {
 	os.Remove(p.assetPath("cfg"))
 	os.Remove(p.assetPath("inventory"))
 	os.Remove(p.assetPath("log"))
+	os.Remove(p.playbookPath())
 }
 
-func (p *Playbook) prepare() (err error) {
-	p.Cleanup()
-	if err = ioutil.WriteFile(p.assetPath("inventory"), []byte(p.Inventory), 0755); err != nil {
-		return
-	}
-	if p.Config != "" {
-		if err = ioutil.WriteFile(p.assetPath("cfg"), []byte(p.Config), 0755); err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (p *Playbook) extra() (r string, err error) {
+func (p *Play) extra() (r string, err error) {
 	if p.ExtraJson == "" {
 		return 
 	}
@@ -129,7 +129,12 @@ func (p *Playbook) extra() (r string, err error) {
 	return
 }
 
-func (p *Playbook) assetPath(kind string) (r string) {
+func (p *Play) assetPath(kind string) (r string) {
 	r = filepath.Join(p.WD, fmt.Sprintf(".ansible-%s.%s", p.Id, kind))
 	return
+}
+
+func (p *Play) playbookPath() (r string) {
+	r = filepath.Join(p.PlayDir, fmt.Sprintf(".ansible-%s.yaml", p.Id))
+	return 
 }

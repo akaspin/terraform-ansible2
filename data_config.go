@@ -1,4 +1,4 @@
-package terraform_ansible2
+package terraform_provider_ansible
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"

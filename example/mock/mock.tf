@@ -1,4 +1,5 @@
-data "ansible2_inventory" "test" {
+
+data "ansible_inventory" "test" {
   hosts {
     group = "first"
     names = ["first-0", "first-1", "first-2"]
@@ -24,17 +25,21 @@ data "ansible2_inventory" "test" {
   }
 }
 
-data "ansible2_config" "test_1" {
+data "ansible_config" "test_1" {
   roles_path = "./roles"
   task_includes_static = true
 }
 
-resource "ansible2_play" "test" {
+data "ansible_playbook" "test" {
+  path = "${path.root}/ansible/playbook-1.yaml"
+}
+
+resource "ansible_playbook" "test" {
   count = 2
-  
-  inventory = "${data.ansible2_inventory.test.rendered}"
-  playbook = "${path.root}/ansible/playbook-1.yaml"
-//  config = "${data.ansible2_config.test_1.rendered}"
+
+  inventory = "${data.ansible_inventory.test.rendered}"
+  playbook = "${data.ansible_playbook.test.rendered}"
+  config = "${data.ansible_config.test_1.rendered}"
   extra_json = <<EOF
   {
     "environment": "aws"

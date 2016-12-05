@@ -1,7 +1,7 @@
 .PHONY: test clean
 
-REPO	= github.com/akaspin/terraform-ansible2
-BIN		= terraform-ansible2
+REPO	= github.com/akaspin/terraform-provider-ansible
+BIN		= terraform-provider-ansible
 
 BENCH	= .
 TESTS	= .

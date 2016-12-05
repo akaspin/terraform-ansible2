@@ -1,10 +1,8 @@
-package terraform_ansible2
+package terraform_provider_ansible
 
 import (
 	"crypto/rand"
 	"fmt"
-	"crypto/sha1"
-	"encoding/hex"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -26,8 +24,3 @@ func extractStringSlice(d *schema.ResourceData, k string) (r []string) {
 	return 
 }
 
-func hashId(what interface{}) (r string) {
-	hash := sha1.Sum([]byte(what.(string)))
-	r = hex.EncodeToString(hash[:])
-	return 
-}

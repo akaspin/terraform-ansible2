@@ -1,8 +1,7 @@
-package terraform_ansible2
+package terraform_provider_ansible
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/akaspin/terraform-ansible2/inventory"
 	"hash/crc32"
 	"fmt"
 )
@@ -105,7 +104,7 @@ func dataInventory() *schema.Resource {
 }
 
 func dataInventoryRead(d *schema.ResourceData, meta interface{}) (err error) {
-	i := inventory.NewInventory()
+	i := NewInventory()
 	
 	for _, raw := range (d.Get("hosts")).([]interface{}) {
 		chunk := raw.(map[string]interface{})
@@ -122,12 +121,12 @@ func dataInventoryRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 		for _, rawVar := range (chunk["var"]).([]interface{}) {
 			mapVar := rawVar.(map[string]interface{})
-			var v *inventory.Variable
+			var v *Variable
 			name := (mapVar["key"]).(string)
 			value := (mapVar["value"]).(string)
 			cast := (mapVar["cast"]).(string)
 
-			if v, err = inventory.NewVariable(name, value, cast); err != nil {
+			if v, err = NewVariable(name, value, cast); err != nil {
 				return
 			}
 			i.AddGroupVar(group, v)
@@ -140,10 +139,10 @@ func dataInventoryRead(d *schema.ResourceData, meta interface{}) (err error) {
 		name := (chunk["key"]).(string)
 		cast := (chunk["cast"]).(string)
 
-		var variables []*inventory.Variable
+		var variables []*Variable
 		for _, val := range (chunk["values"]).([]interface{}) {
-			var v *inventory.Variable
-			if v, err = inventory.NewVariable(name, val.(string), cast); err != nil {
+			var v *Variable
+			if v, err = NewVariable(name, val.(string), cast); err != nil {
 				return
 			}
 			variables = append(variables, v)

@@ -12,12 +12,13 @@ import (
 	"strings"
 )
 
-type PlaybookConfig struct {
-	Id               string
+type Play struct {
+	WD     string
+	Output io.Writer
 
+	Id               string
 	Playbook         string
 	PlayDir          string
-
 	Inventory        string
 	Config           string
 	ExtraJson        string
@@ -25,21 +26,6 @@ type PlaybookConfig struct {
 	SkipTags         []string
 	Limit            string
 	CleanupOnSuccess bool
-}
-
-type Play struct {
-	WD     string
-	Output io.Writer
-	PlaybookConfig
-}
-
-func NewPlay1(wd string, output io.Writer, config PlaybookConfig) (p *Play) {
-	p = &Play{
-		WD: wd,
-		Output:         output,
-		PlaybookConfig: config,
-	}
-	return
 }
 
 func (p *Play) Run() (err error) {

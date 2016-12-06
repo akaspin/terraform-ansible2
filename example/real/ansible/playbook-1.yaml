@@ -1,0 +1,31 @@
+---
+- hosts: all
+  tasks:
+  - debug: msg='no'
+
+- hosts: all
+  tasks:
+  - debug: msg='create only'
+  tags:
+  - create
+
+- hosts: all
+  tasks:
+  - debug: msg='create,modify'
+  tags:
+  - create
+  - modify
+
+- hosts: all
+  tasks:
+  - debug: msg='modify'
+  tags:
+  - modify
+
+- hosts: all
+  tasks:
+  - debug: msg='destroy'
+  tags:
+  - destroy
+
+

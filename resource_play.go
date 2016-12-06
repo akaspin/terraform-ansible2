@@ -199,7 +199,6 @@ func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase strin
 			"tag": true,
 			"untagged": true,
 		}
-		
 	}
 	
 	tags := extractStringSlice(d, "tags")
@@ -210,7 +209,9 @@ func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase strin
 		tags = append(tags, "untagged")
 	}
 	
-	config := PlaybookConfig{
+	r = &Play{
+		WD: wd,
+		Output: output,
 		Id: d.Id(),
 		Config: d.Get("config").(string),
 		ExtraJson: d.Get("extra_json").(string),
@@ -222,7 +223,7 @@ func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase strin
 		Limit: d.Get("limit").(string),
 		CleanupOnSuccess: d.Get("cleanup").(bool),
 	}
-	r = NewPlay1(wd, output, config)
+	
 	ok = phaseOpts[phase]
 	return 
 }

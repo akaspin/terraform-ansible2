@@ -64,7 +64,7 @@ resource "aws_instance" "first" {
 }
 
 resource "aws_instance" "second" {
-  count = 2
+  count = 1
   instance_type = "t2.nano"
   ami = "ami-d2c924b2"
   subnet_id = "${aws_subnet.default.id}"

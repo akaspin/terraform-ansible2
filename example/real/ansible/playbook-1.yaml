@@ -1,7 +1,9 @@
 ---
 - hosts: all
   tasks:
-  - debug: msg='no'
+  - debug: var=hostvars[inventory_hostname]
+#  tags:
+#  - always
 
 - hosts: all
   tasks:
@@ -14,13 +16,13 @@
   - debug: msg='create,modify'
   tags:
   - create
-  - modify
+  - update
 
 - hosts: all
   tasks:
   - debug: msg='modify'
   tags:
-  - modify
+  - update
 
 - hosts: all
   tasks:

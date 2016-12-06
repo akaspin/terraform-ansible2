@@ -4,10 +4,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"hash/crc32"
 	"fmt"
-	"strings"
 )
-
-
 
 func dataInventory() *schema.Resource {
 	return &schema.Resource{
@@ -25,13 +22,13 @@ func dataInventory() *schema.Resource {
 							Type: schema.TypeString,
 						},
 						"names": {
-							Description: "Inventory host names in order delimited by comma (fuckin' tf is buggy)",
+							Description: "Inventory host names in order",
 							Required: true,
-							Type: schema.TypeString,
-							//Elem: &schema.Schema{
-							//	Type: schema.TypeString,
-							//},
-							//MinItems: 1,
+							Type: schema.TypeList,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							MinItems: 1,
 						},
 						"var": {
 							Description: "Group variable",
@@ -79,11 +76,11 @@ func dataInventory() *schema.Resource {
 						},
 						"values": {
 							Description: "Values in order",
-							Type: schema.TypeString,
+							Type: schema.TypeList,
 							Required: true,
-							//Elem: &schema.Schema{
-							//	Type: schema.TypeString,
-							//},
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
 						},
 						"cast": {
 							Description: "Cast value (string, int, float, bool)",
@@ -113,8 +110,8 @@ func dataInventoryRead(d *schema.ResourceData, meta interface{}) (err error) {
 		i.AddGroup(group)
 
 		var hostnames []string
-		for _, hostname := range strings.Split(chunk["names"].(string), ",") {
-			hostnames = append(hostnames, hostname)
+		for _, hostname := range chunk["names"].([]interface{}) {
+			hostnames = append(hostnames, hostname.(string))
 		}
 		if err = i.AddHosts(group, hostnames...); err != nil {
 			return
@@ -141,9 +138,9 @@ func dataInventoryRead(d *schema.ResourceData, meta interface{}) (err error) {
 		cast := (chunk["cast"]).(string)
 
 		var variables []*Variable
-		for _, val := range strings.Split(chunk["values"].(string), ",") {
+		for _, val := range chunk["values"].([]interface{}) {
 			var v *Variable
-			if v, err = NewVariable(name, val, cast); err != nil {
+			if v, err = NewVariable(name, val.(string), cast); err != nil {
 				return
 			}
 			variables = append(variables, v)

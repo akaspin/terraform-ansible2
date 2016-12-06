@@ -71,6 +71,7 @@ func (p *Play) Run() (err error) {
 		[]string{
 			fmt.Sprintf("ANSIBLE_LOG_PATH=%s", p.assetPath("log")),
 			"ANSIBLE_RETRY_FILES_ENABLED=no",
+			"ANSIBLE_NOCOLOR=1",
 		}...)
 	if p.Config != "" {
 		cmd.Env = append(cmd.Env,

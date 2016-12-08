@@ -28,7 +28,7 @@ data "ansible_config" "test" {
 
 resource "ansible_playbook" "test" {
 
+  playbook = "${path.root}/ansible/playbook-1.yaml"
   inventory = "${data.ansible_inventory.test.rendered}"
-  playbook = "${data.ansible_playbook.test.rendered}"
   config = "${data.ansible_config.test.rendered}"
 }

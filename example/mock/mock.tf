@@ -30,19 +30,15 @@ data "ansible_config" "test_1" {
   task_includes_static = true
 }
 
-data "ansible_playbook" "test" {
-  path = "${path.root}/ansible/playbook-1.yaml"
-}
-
 resource "ansible_playbook" "test" {
   count = 2
 
+  playbook = "${path.root}/ansible/playbook-1.yaml"
   inventory = "${data.ansible_inventory.test.rendered}"
-  playbook = "${data.ansible_playbook.test.rendered}"
   config = "${data.ansible_config.test_1.rendered}"
   extra_json = <<EOF
   {
-    "environment": "aws"
+    "playbook_hash": "${sha256(file("${path.root}/ansible/playbook-1.yaml"))}"
   }
   EOF
 //  phase {

@@ -12,7 +12,6 @@ func Provider() (p terraform.ResourceProvider) {
 		DataSourcesMap: map[string]*schema.Resource{
 			"ansible_inventory": dataInventory(),
 			"ansible_config": dataConfig(),
-			"ansible_playbook": dataPlaybook(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"ansible_playbook": resourcePlay(),

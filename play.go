@@ -18,7 +18,6 @@ type Play struct {
 
 	Id               string
 	Playbook         string
-	PlayDir          string
 	Inventory        string
 	Config           string
 	ExtraJson        string
@@ -37,9 +36,6 @@ func (p *Play) Run() (err error) {
 	if err = ioutil.WriteFile(p.assetPath("inventory"), []byte(p.Inventory), 0755); err != nil {
 		return
 	}
-	if err = ioutil.WriteFile(p.playbookPath(), []byte(p.Playbook), 0755); err != nil {
-		return
-	}
 	if p.Config != "" {
 		if err = ioutil.WriteFile(p.assetPath("cfg"), []byte(p.Config), 0755); err != nil {
 			return
@@ -56,17 +52,17 @@ func (p *Play) Run() (err error) {
 	if len(p.Tags) > 0 {
 		params = append(params, []string{
 			"--tags", 
-			fmt.Sprintf(`"%s"`, strings.Join(p.Tags, ",")),
+			fmt.Sprintf(`%s`, strings.Join(p.Tags, ",")),
 		}...)
 	}
 	if len(p.SkipTags) > 0 {
 		params = append(params, []string{
 			"--skip-tags", 
-			fmt.Sprintf(`"%s"`, strings.Join(p.SkipTags, ",")),
+			fmt.Sprintf(`%s`, strings.Join(p.SkipTags, ",")),
 		}...)
 	}
 	
-	cmd := exec.Command("ansible-playbook", append(params, p.playbookPath())...)
+	cmd := exec.Command("ansible-playbook", append(params, p.Playbook)...)
 	cmd.Env = append(os.Environ(),
 		[]string{
 			fmt.Sprintf("ANSIBLE_LOG_PATH=%s", p.assetPath("log")),
@@ -77,6 +73,18 @@ func (p *Play) Run() (err error) {
 		cmd.Env = append(cmd.Env,
 			fmt.Sprintf("ANSIBLE_CONFIG=%s", p.assetPath("cfg")))
 	}
+	
+	// add run options to log
+	loglines := strings.Join([]string{
+		strings.Join(cmd.Env, " "),
+		"\nansible-playbook",
+		strings.Join(cmd.Args, " "),
+		"\n",
+	}, "")
+	if err = ioutil.WriteFile(p.assetPath("log"), []byte(loglines), 0755); err != nil {
+		return
+	}
+	
 
 	log.Printf("running ansible-playbook %s %s", params, cmd.Env)
 	cmd.Stdout = p.Output
@@ -96,7 +104,6 @@ func (p *Play) Cleanup() {
 	os.Remove(p.assetPath("cfg"))
 	os.Remove(p.assetPath("inventory"))
 	os.Remove(p.assetPath("log"))
-	os.Remove(p.playbookPath())
 }
 
 func (p *Play) extra() (r string, err error) {
@@ -121,7 +128,3 @@ func (p *Play) assetPath(kind string) (r string) {
 	return
 }
 
-func (p *Play) playbookPath() (r string) {
-	r = filepath.Join(p.PlayDir, fmt.Sprintf(".ansible-%s.yaml", p.Id))
-	return 
-}

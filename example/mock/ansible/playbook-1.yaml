@@ -3,6 +3,8 @@
   gather_facts: no
   tasks:
   - debug: msg='no'
+  tags:
+  - always
 
 - hosts: all
   gather_facts: no
@@ -11,21 +13,20 @@
   tags:
   - create
 
-
 - hosts: all
   gather_facts: no
   tasks:
-  - debug: msg='create,modify'
+  - debug: msg='create,update'
   tags:
   - create
-  - modify
+  - update
 
 - hosts: all
   gather_facts: no
   tasks:
-  - debug: msg='modify'
+  - debug: msg='update'
   tags:
-  - modify
+  - update
 
 - hosts: all
   gather_facts: no

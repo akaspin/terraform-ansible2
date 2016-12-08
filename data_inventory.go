@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"hash/crc32"
 	"fmt"
+	"strings"
 )
 
 func dataInventory() *schema.Resource {
@@ -30,29 +31,12 @@ func dataInventory() *schema.Resource {
 							},
 							MinItems: 1,
 						},
-						"var": {
-							Description: "Group variable",
+						"vars": {
+							Description: "Group variables. May prepend with `cast:type`",
 							Optional: true,
-							Type: schema.TypeList,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"key": {
-										Description: "Group variable key",
-										Required: true,
-										Type: schema.TypeString,
-									},
-									"value": {
-										Description: "Group variable value",
-										Required: true,
-										Type: schema.TypeString,
-									},
-									"cast": {
-										Description: "Cast value (string, int, float, bool)",
-										Type: schema.TypeString,
-										Optional: true,
-										Default: "string",
-									},
-								},
+							Type: schema.TypeMap,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,	
 							},
 						},
 					},
@@ -117,17 +101,20 @@ func dataInventoryRead(d *schema.ResourceData, meta interface{}) (err error) {
 			return
 		}
 
-		for _, rawVar := range (chunk["var"]).([]interface{}) {
-			mapVar := rawVar.(map[string]interface{})
-			var v *Variable
-			name := (mapVar["key"]).(string)
-			value := (mapVar["value"]).(string)
-			cast := (mapVar["cast"]).(string)
-
-			if v, err = NewVariable(name, value, cast); err != nil {
+		for key, v := range (chunk["vars"]).(map[string]interface {}) {
+			value := strings.TrimSpace(v.(string))
+			cast := "string"
+			if strings.HasPrefix(value, "`cast:") {
+				value = strings.TrimPrefix(value, "`cast:")
+				split := strings.SplitN(value, "`", 2)
+				cast = strings.TrimSpace(split[0])
+				value = strings.TrimSpace(split[1])
+			}
+			var v1 *Variable
+			if v1, err = NewVariable(key, value, cast); err != nil {
 				return
 			}
-			i.AddGroupVar(group, v)
+			i.AddGroupVar(group, v1)
 		}
 	}
 

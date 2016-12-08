@@ -9,9 +9,17 @@ data "ansible_inventory" "test" {
     group = "second"
     names = ["second-0", "second-1"]
 
-    var {
-      key = "ansible_user1"
-      value = "centos"
+    vars {
+      first = "first"
+      second = <<EOF
+      `cast:json` {
+        "deep": 1,
+        "deep_str": "`"
+      }
+      EOF
+    }
+    vars {
+      third = "`cast:string` '  third'"
     }
   }
 

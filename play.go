@@ -33,11 +33,11 @@ func (p *Play) Run() (err error) {
 		return
 	}
 	p.Cleanup()
-	if err = ioutil.WriteFile(p.assetPath("inventory"), []byte(p.Inventory), 0755); err != nil {
+	if err = p.writeAsset("inventory", p.Inventory); err != nil {
 		return
 	}
 	if p.Config != "" {
-		if err = ioutil.WriteFile(p.assetPath("cfg"), []byte(p.Config), 0755); err != nil {
+		if err = p.writeAsset("cfg", p.Config); err != nil {
 			return
 		}
 	}
@@ -76,12 +76,12 @@ func (p *Play) Run() (err error) {
 	
 	// add run options to log
 	loglines := strings.Join([]string{
-		strings.Join(cmd.Env, " "),
+		//strings.Join(cmd.Env, " "),
 		"\nansible-playbook",
 		strings.Join(cmd.Args, " "),
 		"\n",
 	}, "")
-	if err = ioutil.WriteFile(p.assetPath("log"), []byte(loglines), 0755); err != nil {
+	if err = p.writeAsset("log", loglines); err != nil {
 		return
 	}
 	
@@ -124,7 +124,15 @@ func (p *Play) extra() (r string, err error) {
 }
 
 func (p *Play) assetPath(kind string) (r string) {
-	r = filepath.Join(p.WD, fmt.Sprintf(".ansible-%s.%s", p.Id, kind))
+	r = filepath.Join(".ansible", fmt.Sprintf("%s.%s", p.Id, kind))
 	return
 }
 
+func (p *Play) writeAsset(kind string, data string) (err error) {
+	ap := p.assetPath(kind)
+	if err = os.MkdirAll(".ansible", 0755); err != nil {
+		return 
+	}
+	err = ioutil.WriteFile(ap, []byte(data), 0755)
+	return 
+}

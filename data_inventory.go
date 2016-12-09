@@ -5,6 +5,7 @@ import (
 	"hash/crc32"
 	"fmt"
 	"strings"
+	"sort"
 )
 
 func dataInventory() *schema.Resource {
@@ -100,9 +101,16 @@ func dataInventoryRead(d *schema.ResourceData, meta interface{}) (err error) {
 		if err = i.AddHosts(group, hostnames...); err != nil {
 			return
 		}
+		
+		var groupVarKeys sort.StringSlice
+		varsChunk := (chunk["vars"]).(map[string]interface {})
+		for k := range varsChunk {
+			groupVarKeys = append(groupVarKeys, k)
+		}
+		groupVarKeys.Sort()
 
-		for key, v := range (chunk["vars"]).(map[string]interface {}) {
-			value := strings.TrimSpace(v.(string))
+		for _, key := range groupVarKeys {
+			value := strings.TrimSpace(varsChunk[key].(string))
 			cast := "string"
 			if strings.HasPrefix(value, "`cast:") {
 				value = strings.TrimPrefix(value, "`cast:")

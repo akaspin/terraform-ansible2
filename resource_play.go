@@ -79,17 +79,22 @@ func resourcePlay() *schema.Resource {
 							Description: "Add create/modify/destroy tag",
 							Type: schema.TypeBool,
 							Optional: true,
-							Computed: true,
+							Default: true,
 						},
 					},
 				},
 				MaxItems: 1,
 			},
+			"verbose": {
+				Description: "Verbosity level (v, vv, vvv)",
+				Type: schema.TypeString,
+				Optional: true,
+			},
 			"cleanup": {
 				Description: "Remove ansible files after successful run",
 				Type: schema.TypeBool,
 				Optional: true,
-				Default: false,
+				Default: true,
 			},
 		},
 		Create: resourcePlayCreate,
@@ -125,7 +130,7 @@ func resourcePlayDelete(d *schema.ResourceData, meta interface{}) (err error) {
 			return 
 		}
 	}
-	runner.Cleanup()
+	//runner.Cleanup()
 	d.SetId("")
 	return 
 }
@@ -170,6 +175,7 @@ func resourcePlayGetRunner(d *schema.ResourceData, meta interface{}, phase strin
 		Tags: tags,
 		SkipTags: extractStringSlice(d, "skip_tags"),
 		Limit: d.Get("limit").(string),
+		Verbosity: d.Get("verbose").(string),
 		CleanupOnSuccess: d.Get("cleanup").(bool),
 	}
 	

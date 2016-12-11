@@ -17,6 +17,12 @@ data "ansible_inventory" "test" {
         "deep_str": "`"
       }
       EOF
+      ab = <<EOF
+      `cast:json` {
+        "b": true,
+        "a": 1
+      }
+      EOF
     }
     vars {
       third = "`cast:string` '  third'"
@@ -36,6 +42,7 @@ data "ansible_inventory" "test" {
 data "ansible_config" "test_1" {
   roles_path = "./roles"
   task_includes_static = true
+  callback_whitelist = "profile_tasks"
 }
 
 resource "ansible_playbook" "test" {
@@ -44,16 +51,16 @@ resource "ansible_playbook" "test" {
   playbook = "${path.root}/ansible/playbook-1.yaml"
   inventory = "${data.ansible_inventory.test.rendered}"
   config = "${data.ansible_config.test_1.rendered}"
+  phase {
+    destroy = true
+  }
+  cleanup = false
   extra_json = <<EOF
   {
-    "playbook_hash": "${sha256(file("${path.root}/ansible/playbook-1.yaml"))}"
+    "playbook_hash": "${sha256(file("${path.root}/ansible/playbook-1.yaml"))}",
+    "a": 1,
+    "b": true
   }
   EOF
-//  phase {
-//    modify = true
-//  }
-//  phase {
-//    modify = false
-//  }
 }
 

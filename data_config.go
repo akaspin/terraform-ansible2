@@ -32,6 +32,19 @@ func dataConfigHierarchy() map[string]map[string]*schema.Schema {
 				Type: schema.TypeInt,
 				Optional: true,
 			},
+			"display_skipped_hosts": {
+				Type: schema.TypeBool,
+				Optional: true,
+				Default: false,
+			},
+			"stdout_callback": {
+				Type: schema.TypeString,
+				Optional: true,
+			},
+			"callback_whitelist": {
+				Type: schema.TypeString,
+				Optional: true,
+			},
 			
 			"transport": {
 				Type: schema.TypeString,

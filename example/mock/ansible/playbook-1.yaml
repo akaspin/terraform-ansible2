@@ -2,14 +2,14 @@
 - hosts: all
   gather_facts: no
   tasks:
-  - debug: msg='no'
+  - debug: msg='always'
   tags:
   - always
 
 - hosts: all
   gather_facts: no
   tasks:
-  - debug: msg='create only'
+  - debug: msg='create'
   tags:
   - create
 

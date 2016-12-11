@@ -24,6 +24,7 @@ type Play struct {
 	Tags             []string
 	SkipTags         []string
 	Limit            string
+	Verbosity string
 	CleanupOnSuccess bool
 }
 
@@ -32,20 +33,16 @@ func (p *Play) Run() (err error) {
 	if extra, err = p.extra(); err != nil {
 		return
 	}
-	p.Cleanup()
-	if err = p.writeAsset("inventory", p.Inventory); err != nil {
-		return
-	}
-	if p.Config != "" {
-		if err = p.writeAsset("cfg", p.Config); err != nil {
-			return
-		}
-	}
-
+	
+	
 	params := []string{
 		"-l", p.Limit,
 		"-i", p.assetPath("inventory"),
 	}
+	if p.Verbosity != "" {
+		params = append(params, fmt.Sprintf("-%s", p.Verbosity))
+	}
+	
 	if extra != "" {
 		params = append(params, []string{"-e", fmt.Sprintf("'%s'", extra)}...)
 	}
@@ -81,11 +78,21 @@ func (p *Play) Run() (err error) {
 		strings.Join(cmd.Args, " "),
 		"\n",
 	}, "")
+	
+	p.Cleanup()
+	if err = p.writeAsset("inventory", p.Inventory); err != nil {
+		return
+	}
+	if p.Config != "" {
+		if err = p.writeAsset("cfg", p.Config); err != nil {
+			return
+		}
+	}
 	if err = p.writeAsset("log", loglines); err != nil {
 		return
 	}
-	
 
+	fmt.Fprintf(p.Output, "%#v %t", p.Output, p.Output)
 	log.Printf("running ansible-playbook %s %s", params, cmd.Env)
 	cmd.Stdout = p.Output
 	cmd.Stderr = p.Output

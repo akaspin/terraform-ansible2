@@ -85,6 +85,12 @@ func resourcePlay() *schema.Resource {
 				},
 				MaxItems: 1,
 			},
+			"strict_destroy": {
+				Description: "Fail if destroy fails",
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default: false,
+			},
 			"verbose": {
 				Description: "Verbosity level (v, vv, vvv)",
 				Type: schema.TypeString,
@@ -127,7 +133,10 @@ func resourcePlayDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	runner, ok := resourcePlayGetRunner(d, meta, "destroy")
 	if ok {
 		if err = runner.Run(); err != nil {
-			return 
+			if d.Get("strict_destroy").(bool) {
+				return 
+			}
+			err = nil
 		}
 	}
 	//runner.Cleanup()

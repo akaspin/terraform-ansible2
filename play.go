@@ -44,7 +44,7 @@ func (p *Play) Run() (err error) {
 	}
 	
 	if extra != "" {
-		params = append(params, []string{"-e", fmt.Sprintf("'%s'", extra)}...)
+		params = append(params, []string{"-e", fmt.Sprintf("%s", extra)}...)
 	}
 	if len(p.Tags) > 0 {
 		params = append(params, []string{
